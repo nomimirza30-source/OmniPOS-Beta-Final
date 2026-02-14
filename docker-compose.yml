@@ -4,7 +4,6 @@ services:
     build:
       context: .
       dockerfile: OmniPOS.Api/Dockerfile
-    image: ghcr.io/nomimirza30-source/omnipos-api:latest
     container_name: omnipos-api
     networks:
       - omnipos-network
@@ -21,7 +20,6 @@ services:
     build:
       context: ./OmniPOS.Web-React
       dockerfile: Dockerfile
-    image: ghcr.io/nomimirza30-source/omnipos-web:latest
     container_name: omnipos-webserver
     ports:
       - "8081:80"
