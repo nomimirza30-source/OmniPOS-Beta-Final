@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import Modal from './Modal';
 
 const FloorPlan = () => {
-    const { tables, addTable, updateTable, deleteTable, user, fetchTables } = useStore();
+    const { tables, addTableAsync, updateTableAsync, deleteTableAsync, user, fetchTables } = useStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({ num: '', cap: 2, shape: 'Square' });
 
@@ -42,7 +42,7 @@ const FloorPlan = () => {
         const col = index % maxPerRow;
         const row = Math.floor(index / maxPerRow);
 
-        addTable({
+        addTableAsync({
             ...formData,
             pos: { x: 50 + (col * spacing), y: 50 + (row * spacing) },
             status: 'Available'
@@ -57,7 +57,7 @@ const FloorPlan = () => {
             // Ensure coordinates stay within reasonable bounds of the 500px container
             const newX = Math.max(0, Math.min(800, table.pos.x + info.offset.x));
             const newY = Math.max(0, Math.min(410, table.pos.y + info.offset.y));
-            updateTable(id, { pos: { x: newX, y: newY } });
+            updateTableAsync(id, { pos: { x: newX, y: newY } });
         }
     };
 
@@ -96,7 +96,7 @@ const FloorPlan = () => {
 
                         {canManageTables && (
                             <button
-                                onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }}
+                                onClick={(e) => { e.stopPropagation(); deleteTableAsync(table.id); }}
                                 className="absolute -top-2 -right-2 p-1 bg-red-500 text-slate-950 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                 <Trash2 size={10} />

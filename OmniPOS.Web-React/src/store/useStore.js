@@ -288,16 +288,128 @@ export const useStore = create(
 
             // Table Actions
             addTable: (table) => set((state) => ({
-                tables: [...state.tables, { ...table, id: `T${Date.now()}` }],
+                tables: [...state.tables, { ...table, id: generateGUID() }],
                 logs: [...state.logs, `> Added table ${table.num}`]
             })),
+
+            addTableAsync: async (tableData) => {
+                const { token, currentTenantId, fetchTables, addLog } = get();
+                if (!token) return;
+
+                const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
+                const newId = generateGUID();
+
+                const payload = {
+                    restaurantTableId: newId,
+                    tenantId: tidHeader,
+                    tableNumber: tableData.num,
+                    capacity: tableData.cap,
+                    status: tableData.status || 'Available',
+                    posX: tableData.pos.x,
+                    posY: tableData.pos.y
+                };
+
+                try {
+                    const response = await fetch('/api/table', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`,
+                            'X-Tenant-ID': tidHeader
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        addLog(`Table ${tableData.num} saved to server`);
+                        await fetchTables();
+                        return true;
+                    } else {
+                        const err = await response.text();
+                        addLog(`Failed to save table: ${err}`);
+                        return false;
+                    }
+                } catch (error) {
+                    addLog(`Error adding table: ${error.message}`);
+                    return false;
+                }
+            },
+
             updateTable: (id, updates) => set((state) => ({
                 tables: state.tables.map(t => t.id === id ? { ...t, ...updates } : t)
             })),
+
+            updateTableAsync: async (id, updates) => {
+                const { token, currentTenantId, tables, fetchTables, addLog } = get();
+                if (!token) return;
+
+                const table = tables.find(t => t.id === id);
+                if (!table) return;
+
+                const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
+
+                const payload = {
+                    restaurantTableId: id,
+                    tenantId: tidHeader,
+                    tableNumber: updates.num || table.num,
+                    capacity: updates.cap || table.cap,
+                    status: updates.status || table.status,
+                    posX: updates.pos?.x ?? table.pos.x,
+                    posY: updates.pos?.y ?? table.pos.y
+                };
+
+                try {
+                    const response = await fetch(`/api/table/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`,
+                            'X-Tenant-ID': tidHeader
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        addLog(`Table ${payload.tableNumber} updated on server`);
+                        // We don't always need to refetch if we update local state, 
+                        // but let's do it for consistency or update local state
+                        set((state) => ({
+                            tables: state.tables.map(t => t.id === id ? { ...t, ...updates } : t)
+                        }));
+                    }
+                } catch (error) {
+                    addLog(`Error updating table: ${error.message}`);
+                }
+            },
+
             deleteTable: (id) => set((state) => ({
                 tables: state.tables.filter(t => t.id !== id),
                 logs: [...state.logs, `> Deleted table ${id}`]
             })),
+
+            deleteTableAsync: async (id) => {
+                const { token, currentTenantId, fetchTables, addLog } = get();
+                if (!token) return;
+
+                const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
+
+                try {
+                    const response = await fetch(`/api/table/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'X-Tenant-ID': tidHeader
+                        }
+                    });
+
+                    if (response.ok) {
+                        addLog(`Table deleted from server`);
+                        await fetchTables();
+                    }
+                } catch (error) {
+                    addLog(`Error deleting table: ${error.message}`);
+                }
+            },
 
             // Menu Actions
             addMenuItem: (item) => set((state) => ({
