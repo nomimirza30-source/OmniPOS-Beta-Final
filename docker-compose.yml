@@ -1,3 +1,4 @@
+# OmniPOS VPS Deployment Configuration v2 (No redundant mounts)
 services:
   api:
     image: ghcr.io/nomimirza30-source/omnipos-api:latest
@@ -13,9 +14,9 @@ services:
       - ConnectionStrings__DefaultConnection=Data Source=/app/data/omnipos.db
     restart: always
 
-  web:
+  webserver:
     image: ghcr.io/nomimirza30-source/omnipos-web:latest
-    container_name: omnipos-web
+    container_name: omnipos-webserver
     ports:
       - "8081:80"
       - "8443:443"
