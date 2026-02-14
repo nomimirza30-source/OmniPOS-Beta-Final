@@ -1354,6 +1354,7 @@ export const useStore = create(
 
                 try {
                     const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
+                    console.log('[fetchTables] Fetching with Tenant:', tidHeader, 'Role:', get().user?.role);
                     const response = await fetch('/api/table', {
                         headers: {
                             Authorization: `Bearer ${token}`,
@@ -1454,7 +1455,9 @@ export const useStore = create(
                     const roleMapping = {
                         'Chef': 'Kitchen',
                         'Assistant Chef': 'Kitchen',
-                        'Kitchen': 'Kitchen'
+                        'Kitchen': 'Kitchen',
+                        'Waiter': 'Waiter',
+                        'Till': 'Till'
                     };
                     const effectiveRole = roleMapping[user.role] || user.role;
                     await connection.invoke('JoinRoleGroup', effectiveRole);
@@ -1462,6 +1465,21 @@ export const useStore = create(
                     console.log(`[SignalR] Joined groups: ${effectiveRole} and GlobalTenant`);
 
                     set({ hubConnection: connection });
+                    // Listen for real-time table updates
+                    connection.on('ReceiveTableUpdate', (action, data) => {
+                        console.log(`[SignalR] Table ${action}:`, data);
+                        const { fetchTables } = get();
+                        // Instead of complex logic, let's just refetch to remain source-of-truth
+                        fetchTables();
+                    });
+
+                    // Listen for global notifications
+                    connection.on('ReceiveNotification', (notification) => {
+                        set((state) => ({
+                            notifications: [notification, ...state.notifications]
+                        }));
+                    });
+
                 } catch (error) {
                     console.error('[SignalR] Connection failed:', error);
                 }
@@ -1483,7 +1501,9 @@ export const useStore = create(
                         const employees = staffData.map(s => ({
                             id: s.staffId,
                             name: s.fullName,
+                            username: s.username,
                             role: s.role,
+                            email: s.email,
                             payRate: s.payRate || 0,
                             workingDays: JSON.parse(s.workingDays || '[]'),
                             status: s.status || 'Active'
@@ -1493,6 +1513,95 @@ export const useStore = create(
                     }
                 } catch (error) {
                     console.error('[useStore] Failed to fetch employees:', error);
+                }
+            },
+
+            addStaffAsync: async (staffData) => {
+                const { token, currentTenantId, fetchEmployees, addLog } = get();
+                const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
+
+                try {
+                    const response = await fetch('/api/staff', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Tenant-ID': tidHeader,
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(staffData)
+                    });
+
+                    if (response.ok) {
+                        addLog(`Staff member ${staffData.fullName} created successfully`);
+                        await fetchEmployees();
+                        return true;
+                    } else {
+                        const err = await response.text();
+                        addLog(`Staff creation failed: ${err}`);
+                        return false;
+                    }
+                } catch (error) {
+                    addLog(`Network error creating staff: ${error.message}`);
+                    return false;
+                }
+            },
+
+            updateStaffRoleAsync: async (id, role, payRate, workingDays) => {
+                const { token, currentTenantId, fetchEmployees, addLog } = get();
+                const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
+
+                try {
+                    const response = await fetch(`/api/staff/${id}/role`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Tenant-ID': tidHeader,
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ role, payRate, workingDays })
+                    });
+
+                    if (response.ok) {
+                        addLog(`Staff role updated successfully`);
+                        await fetchEmployees();
+                        return true;
+                    } else {
+                        const err = await response.text();
+                        addLog(`Role update failed: ${err}`);
+                        return false;
+                    }
+                } catch (error) {
+                    addLog(`Network error updating role: ${error.message}`);
+                    return false;
+                }
+            },
+
+            changeStaffPasswordAsync: async (id, newPassword) => {
+                const { token, currentTenantId, addLog } = get();
+                const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
+
+                try {
+                    const response = await fetch(`/api/staff/${id}/password`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Tenant-ID': tidHeader,
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ newPassword })
+                    });
+
+                    if (response.ok) {
+                        addLog(`Staff password updated successfully`);
+                        return true;
+                    } else {
+                        const err = await response.text();
+                        addLog(`Password change failed: ${err}`);
+                        return false;
+                    }
+                } catch (error) {
+                    addLog(`Network error changing password: ${error.message}`);
+                    return false;
                 }
             },
 

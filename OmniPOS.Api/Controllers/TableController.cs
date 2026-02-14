@@ -5,16 +5,18 @@ using OmniPOS.Api.Data;
 
 namespace OmniPOS.Api.Controllers;
 
-[Authorize]
+[Authorize(Policy = "RequireServer")]
 [ApiController]
 [Route("api/[controller]")]
 public class TableController : ControllerBase
 {
     private readonly OmniDbContext _context;
+    private readonly Microsoft.AspNetCore.SignalR.IHubContext<OmniPOS.Api.Hubs.NotificationHub> _hubContext;
 
-    public TableController(OmniDbContext context)
+    public TableController(OmniDbContext context, Microsoft.AspNetCore.SignalR.IHubContext<OmniPOS.Api.Hubs.NotificationHub> hubContext)
     {
         _context = context;
+        _hubContext = hubContext;
     }
 
     [HttpGet]
@@ -36,6 +38,10 @@ public class TableController : ControllerBase
     {
         _context.RestaurantTables.Add(table);
         await _context.SaveChangesAsync();
+
+        // Broadcast update
+        await _hubContext.Clients.Group($"Tenant_{table.TenantId}").SendAsync("ReceiveTableUpdate", "Create", table);
+
         return CreatedAtAction(nameof(GetTable), new { id = table.RestaurantTableId }, table);
     }
 
@@ -45,6 +51,10 @@ public class TableController : ControllerBase
         if (id != table.RestaurantTableId) return BadRequest();
         _context.Entry(table).State = EntityState.Modified;
         await _context.SaveChangesAsync();
+
+        // Broadcast update
+        await _hubContext.Clients.Group($"Tenant_{table.TenantId}").SendAsync("ReceiveTableUpdate", "Update", table);
+
         return NoContent();
     }
 
@@ -55,6 +65,10 @@ public class TableController : ControllerBase
         if (table == null) return NotFound();
         _context.RestaurantTables.Remove(table);
         await _context.SaveChangesAsync();
+
+        // Broadcast update
+        await _hubContext.Clients.Group($"Tenant_{table.TenantId}").SendAsync("ReceiveTableUpdate", "Delete", id);
+
         return NoContent();
     }
 }

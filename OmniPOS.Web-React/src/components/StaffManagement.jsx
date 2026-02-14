@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useStore } from '../store/useStore';
 import { UserPlus, Edit, Key, Trash, Shield, Users } from 'lucide-react';
 
 const StaffManagement = () => {
-    const { user, token, currentTenantId, fetchEmployees, roles } = useStore();
-    const [staff, setStaff] = useState([]);
+    const {
+        user, token, currentTenantId, fetchEmployees, employees, roles,
+        addStaffAsync, updateStaffRoleAsync, changeStaffPasswordAsync
+    } = useStore();
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -22,79 +23,44 @@ const StaffManagement = () => {
     const [newPassword, setNewPassword] = useState('');
 
     useEffect(() => {
-        fetchStaff();
-    }, []);
-
-    const fetchStaff = async () => {
-        try {
-            const response = await axios.get('http://localhost:5000/api/staff', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant-ID': currentTenantId
-                }
-            });
-            setStaff(response.data);
-        } catch (error) {
-            console.error('Error fetching staff:', error);
-        } finally {
+        const load = async () => {
+            await fetchEmployees();
             setLoading(false);
-        }
-    };
+        };
+        load();
+    }, [fetchEmployees]);
+
 
     const handleCreateStaff = async (e) => {
         e.preventDefault();
-        try {
-            await axios.post('http://localhost:5000/api/staff', {
-                ...newStaff,
-                workingDays: JSON.stringify(newStaff.workingDays)
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant-ID': currentTenantId
-                }
-            });
+        const success = await addStaffAsync({
+            ...newStaff,
+            workingDays: JSON.stringify(newStaff.workingDays)
+        });
+
+        if (success) {
             setShowAddModal(false);
-            setNewStaff({ fullName: '', username: '', role: 'Waiter', password: '', email: '', payRate: 0, workingDays: [] });
-            fetchStaff();
-            fetchEmployees(); // Sync with store for StaffRota
-        } catch (error) {
-            alert('Error creating staff: ' + (error.response?.data || error.message));
+            setNewStaff({ fullName: '', username: '', role: roles[0]?.name || 'Waiter', password: '', email: '', payRate: 0, workingDays: [] });
+        } else {
+            alert('Error creating staff member');
         }
     };
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
-        try {
-            await axios.put(`http://localhost:5000/api/staff/${selectedStaff.staffId}/password`, {
-                newPassword: newPassword
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant-ID': currentTenantId
-                }
-            });
+        const success = await changeStaffPasswordAsync(selectedStaff.staffId, newPassword);
+        if (success) {
             setShowPasswordModal(false);
             setNewPassword('');
             alert('Password updated successfully');
-        } catch (error) {
+        } else {
             alert('Error updating password');
         }
     };
 
     const handleRoleUpdate = async (staffId, newRole) => {
-        try {
-            await axios.put(`http://localhost:5000/api/staff/${staffId}/role`, {
-                role: newRole
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant-ID': currentTenantId
-                }
-            });
-            fetchStaff();
-        } catch (error) {
-            alert('Error updating role');
-        }
+        const staffMember = employees.find(e => e.id === staffId);
+        await updateStaffRoleAsync(staffId, newRole, staffMember?.payRate || 0, JSON.stringify(staffMember?.workingDays || []));
     };
 
     if (!['Admin', 'Owner', 'Manager'].includes(user?.role)) {
@@ -128,23 +94,23 @@ const StaffManagement = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {staff.map((employee) => (
-                            <tr key={employee.staffId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        {employees.map((employee) => (
+                            <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                 <td className="p-4 font-medium text-gray-900 dark:text-white">
                                     <div className="flex flex-col">
-                                        <span>{employee.fullName}</span>
+                                        <span>{employee.name}</span>
                                         <span className="text-xs text-gray-400">{employee.email}</span>
                                     </div>
                                 </td>
-                                <td className="p-4 text-gray-600 dark:text-gray-300">{employee.username}</td>
+                                <td className="p-4 text-gray-600 dark:text-gray-300">{employee.username || employee.name.toLowerCase().replace(' ', '.')}</td>
                                 <td className="p-4">
                                     <div className="relative inline-block w-40">
                                         <select
                                             value={employee.role}
-                                            onChange={(e) => handleRoleUpdate(employee.staffId, e.target.value)}
+                                            onChange={(e) => handleRoleUpdate(employee.id, e.target.value)}
                                             className="w-full pl-3 pr-10 py-1.5 bg-gray-100 dark:bg-gray-600 border-none rounded-md text-sm focus:ring-2 focus:ring-indigo-500"
                                         >
-                                            {(roles.length > 0 ? roles : [{ name: 'Waiter' }]).concat({ name: 'Admin' }).map(r => (
+                                            {roles.map(r => (
                                                 <option key={r.name} value={r.name}>{r.name}</option>
                                             ))}
                                         </select>
@@ -153,7 +119,7 @@ const StaffManagement = () => {
                                 <td className="p-4 text-right flex justify-end gap-2">
                                     <button
                                         onClick={() => {
-                                            setSelectedStaff(employee);
+                                            setSelectedStaff({ ...employee, staffId: employee.id });
                                             setShowPasswordModal(true);
                                         }}
                                         className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
@@ -166,7 +132,7 @@ const StaffManagement = () => {
                         ))}
                     </tbody>
                 </table>
-                {staff.length === 0 && !loading && (
+                {employees.length === 0 && !loading && (
                     <div className="p-8 text-center text-gray-500">No staff members found.</div>
                 )}
             </div>
@@ -213,7 +179,7 @@ const StaffManagement = () => {
                                     value={newStaff.role}
                                     onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
                                 >
-                                    {(roles.length > 0 ? roles : [{ name: 'Waiter' }]).concat({ name: 'Admin' }).map(r => (
+                                    {roles.map(r => (
                                         <option key={r.name} value={r.name}>{r.name}</option>
                                     ))}
                                 </select>
