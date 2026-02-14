@@ -87,7 +87,7 @@ public class AuthController : ControllerBase
         {
             new Claim(JwtRegisteredClaimNames.Sub, staff.StaffId.ToString()),
             new Claim(ClaimTypes.Role, staff.Role),
-            new Claim("tenant_id", staff.TenantId.ToString()),
+            new Claim("TenantId", staff.TenantId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
