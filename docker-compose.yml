@@ -1,6 +1,9 @@
 # OmniPOS VPS Deployment Configuration v2 (No redundant mounts)
 services:
   api:
+    build:
+      context: .
+      dockerfile: OmniPOS.Api/Dockerfile
     image: ghcr.io/nomimirza30-source/omnipos-api:latest
     container_name: omnipos-api
     networks:
@@ -15,6 +18,9 @@ services:
     restart: always
 
   webserver:
+    build:
+      context: ./OmniPOS.Web-React
+      dockerfile: Dockerfile
     image: ghcr.io/nomimirza30-source/omnipos-web:latest
     container_name: omnipos-webserver
     ports:
