@@ -1,10 +1,10 @@
 # OmniPOS VPS Deployment Configuration v2 (No redundant mounts)
 services:
-  api:
+  omni_api_v3:
     build:
       context: .
       dockerfile: OmniPOS.Api/Dockerfile
-    container_name: omnipos-api
+    container_name: omnipos-api-v3
     networks:
       - omnipos-network
     volumes:
@@ -16,11 +16,11 @@ services:
       - ConnectionStrings__DefaultConnection=Data Source=/app/data/omnipos.db
     restart: always
 
-  webserver:
+  omni_web_v3:
     build:
       context: ./OmniPOS.Web-React
       dockerfile: Dockerfile
-    container_name: omnipos-webserver
+    container_name: omnipos-web-v3
     ports:
       - "8081:80"
       - "8443:443"
@@ -29,7 +29,7 @@ services:
       - ./certbot/var:/var/lib/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
     depends_on:
-      - api
+      - omni_api_v3
     networks:
       - omnipos-network
     restart: always
