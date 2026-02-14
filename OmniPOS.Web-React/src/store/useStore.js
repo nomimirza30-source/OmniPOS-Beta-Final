@@ -5,6 +5,16 @@ import * as signalR from '@microsoft/signalr';
 
 const syncChannel = new BroadcastChannel('omnipos-sync');
 
+// GUID Helper for non-secure contexts (VPS over HTTP)
+const generateGUID = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+};
+
 export const useStore = create(
     persist(
         (set, get) => ({
@@ -385,10 +395,8 @@ export const useStore = create(
                     get().addLog(`Starting createOrder for ${orderData.tableId || 'Walk-in'}...`);
                     const { currentTenantId, deviceId } = get();
 
-                    // Fallback for non-secure (HTTP) contexts where randomUUID is restricted
-                    const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-                        ? crypto.randomUUID()
-                        : `fallback-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+                    // Standardize on valid GUIDs to ensure backend/sync compatibility
+                    const id = generateGUID();
 
                     const clock = { [deviceId]: 1 };
 
@@ -420,7 +428,7 @@ export const useStore = create(
                             );
                         } else if (orderData.customerName) {
                             updatedCustomers = [...state.customers, {
-                                id: `CUST-${Math.floor(Math.random() * 10000)}`,
+                                id: generateGUID(),
                                 tenantId: currentTenantId,
                                 name: orderData.customerName,
                                 email: orderData.customerEmail || '',
