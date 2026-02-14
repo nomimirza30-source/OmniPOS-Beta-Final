@@ -20,6 +20,7 @@ export const useStore = create(
         (set, get) => ({
             currentTenantId: '00000000-0000-0000-0000-000000001111',
             deviceId: `tablet-${Math.floor(Math.random() * 1000)}`,
+            posVersion: "v3-guid-fix",
             currentView: 'Dashboard',
 
             // User & Role State (Authenticated)
