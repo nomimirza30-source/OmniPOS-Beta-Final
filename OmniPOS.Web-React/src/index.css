@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 15 23 42;
+  --text: 248 250 252;
+  --muted: 148 163 184;
+  /* Slate 400 */
+  --border: 255 255 255 / 0.1;
+  --glass-bg: 30 41 59;
+  --primary: 56 189 248;
+  --primary-glow: rgb(var(--primary) / 0.15);
+  --secondary: 129 140 248;
+  --secondary-glow: rgb(var(--secondary) / 0.15);
+}
+
+:root.light {
+  --bg: 248 250 252;
+  --text: 15 23 42;
+  --muted: 51 65 85;
+  /* Slate 700 - much darker for light mode */
+  --border: 0 0 0 / 0.15;
+  --glass-bg: 255 255 255;
+}
+
+body {
+  background: rgb(var(--bg));
+  background-image: radial-gradient(circle at 0% 0%, var(--primary-glow) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, var(--primary-glow) 0%, transparent 50%);
+  color: rgb(var(--text));
+  min-height: 100vh;
+}
+
+.glass-card {
+  background: rgb(var(--glass-bg) / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgb(var(--text) / 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* Custom Minimalist Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.4);
+}

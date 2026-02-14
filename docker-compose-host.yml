@@ -1,0 +1,25 @@
+services:
+  api:
+    image: ghcr.io/nomimirza30-source/omnipos-api:latest
+    container_name: omnipos-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/omnipos.db
+    volumes:
+      - ./OmniPOS.Api/wwwroot/uploads:/app/wwwroot/uploads
+      - ./data:/app/data
+    restart: always
+
+  web:
+    image: ghcr.io/nomimirza30-source/omnipos-web:latest
+    container_name: omnipos-web
+    network_mode: host
+    volumes:
+      - ./OmniPOS.Web-React/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/var:/var/lib/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    restart: always

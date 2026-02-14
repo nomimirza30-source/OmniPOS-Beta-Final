@@ -1,0 +1,13 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Users\NaumanBaig\Desktop\OWN POS\OmniPOS.Api\Controllers\StaffController.cs(141,19): warning CS8618: Non-nullable property 'WorkingDays' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\NaumanBaig\Desktop\OWN POS\OmniPOS.Api\OmniPOS.Api.csproj]
+C:\Users\NaumanBaig\Desktop\OWN POS\OmniPOS.Api\Controllers\OrderController.cs(101,38): error CS1061: 'IGroupManager' does not contain a definition for 'Group' and no accessible extension method 'Group' accepting a first argument of type 'IGroupManager' could be found (are you missing a using directive or an assembly reference?) [C:\Users\NaumanBaig\Desktop\OWN POS\OmniPOS.Api\OmniPOS.Api.csproj]
+
+Build FAILED.
+
+C:\Users\NaumanBaig\Desktop\OWN POS\OmniPOS.Api\Controllers\StaffController.cs(141,19): warning CS8618: Non-nullable property 'WorkingDays' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\NaumanBaig\Desktop\OWN POS\OmniPOS.Api\OmniPOS.Api.csproj]
+C:\Users\NaumanBaig\Desktop\OWN POS\OmniPOS.Api\Controllers\OrderController.cs(101,38): error CS1061: 'IGroupManager' does not contain a definition for 'Group' and no accessible extension method 'Group' accepting a first argument of type 'IGroupManager' could be found (are you missing a using directive or an assembly reference?) [C:\Users\NaumanBaig\Desktop\OWN POS\OmniPOS.Api\OmniPOS.Api.csproj]
+    1 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.37

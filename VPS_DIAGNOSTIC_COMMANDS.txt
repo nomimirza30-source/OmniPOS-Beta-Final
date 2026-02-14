@@ -1,0 +1,31 @@
+# Quick VPS Diagnostic Commands
+# Run these commands to check the container status
+
+## Step 1: Connect to VPS
+# Replace with your actual VPS IP
+ssh root@YOUR_VPS_IP
+
+## Step 2: Navigate to project directory
+cd /root/omnipos
+
+## Step 3: Check container status
+docker compose ps
+
+## Step 4: View API container logs (last 100 lines)
+docker compose logs api --tail=100
+
+## Step 5: Check if database file exists
+docker compose exec api ls -lah /app/*.db
+
+## Step 6: If container is crashed, restart it
+docker compose down
+docker compose up -d
+
+## Step 7: Follow logs in real-time
+docker compose logs api -f
+
+## What to look for:
+# ✅ "[Database] Staff accounts seeded successfully"
+# ❌ "TenantId is required" or similar errors
+# ❌ Container restart loops
+# ❌ Port binding errors
