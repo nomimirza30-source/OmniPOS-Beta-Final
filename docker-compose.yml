@@ -2,8 +2,8 @@
 services:
   omni_api_v3:
     build:
-      context: .
-      dockerfile: OmniPOS.Api/Dockerfile
+      context: ./OmniPOS.Api
+      dockerfile: Dockerfile
     container_name: omnipos-api-v3
     networks:
       - omnipos-network
