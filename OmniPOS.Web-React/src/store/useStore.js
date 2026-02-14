@@ -20,7 +20,7 @@ export const useStore = create(
         (set, get) => ({
             currentTenantId: '00000000-0000-0000-0000-000000001111',
             deviceId: `tablet-${Math.floor(Math.random() * 1000)}`,
-            posVersion: "v3-guid-fix",
+            posVersion: "v3.2-persistence-fix",
             currentView: 'Dashboard',
 
             // User & Role State (Authenticated)
@@ -90,7 +90,7 @@ export const useStore = create(
                     console.error('Failed to fetch branding:', error);
                 }
             },
-            logs: ['> OmniPOS v1.1.30 - System ready...', '> Role-Based Security Node (v1.1.30) active...'],
+            logs: ['> OmniPOS v3.2 - Persistence Fix Active...', '> System ready...', '> Role-Based Security Node active...'],
 
             // Cash Register State
             cashRegister: {
@@ -299,14 +299,30 @@ export const useStore = create(
                 const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
                 const newId = generateGUID();
 
+                // OPTIMISTIC UPDATE: Add to local state immediately
+                const tempTable = {
+                    id: newId,
+                    num: tableData.num,
+                    pos: tableData.pos,
+                    status: tableData.status || 'Available',
+                    cap: tableData.cap,
+                    shape: tableData.shape || 'Square',
+                    syncing: true
+                };
+
+                set((state) => ({
+                    tables: [...state.tables, tempTable],
+                    logs: [...state.logs, `> Adding Table ${tableData.num} (Optimistic)...`]
+                }));
+
                 const payload = {
                     restaurantTableId: newId,
                     tenantId: tidHeader,
-                    tableNumber: tableData.num,
-                    capacity: tableData.cap,
+                    tableNumber: String(tableData.num),
+                    capacity: Number(tableData.cap),
                     status: tableData.status || 'Available',
-                    posX: tableData.pos.x,
-                    posY: tableData.pos.y
+                    posX: Math.round(tableData.pos.x),
+                    posY: Math.round(tableData.pos.y)
                 };
 
                 try {
@@ -321,16 +337,24 @@ export const useStore = create(
                     });
 
                     if (response.ok) {
-                        addLog(`Table ${tableData.num} saved to server`);
+                        addLog(`Table ${tableData.num} saved to server successfully`);
+                        // Final sync to ensure everything is perfect
                         await fetchTables();
                         return true;
                     } else {
                         const err = await response.text();
-                        addLog(`Failed to save table: ${err}`);
+                        addLog(`SERVER REJECTED TABLE: ${err}`);
+                        // Rollback on failure
+                        set((state) => ({
+                            tables: state.tables.filter(t => t.id !== newId)
+                        }));
                         return false;
                     }
                 } catch (error) {
-                    addLog(`Error adding table: ${error.message}`);
+                    addLog(`NETWORK ERROR ADDING TABLE: ${error.message}`);
+                    set((state) => ({
+                        tables: state.tables.filter(t => t.id !== newId)
+                    }));
                     return false;
                 }
             },
@@ -348,14 +372,20 @@ export const useStore = create(
 
                 const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
 
+                // OPTIMISTIC UPDATE
+                const oldTable = { ...table };
+                set((state) => ({
+                    tables: state.tables.map(t => t.id === id ? { ...t, ...updates } : t)
+                }));
+
                 const payload = {
                     restaurantTableId: id,
                     tenantId: tidHeader,
-                    tableNumber: updates.num || table.num,
-                    capacity: updates.cap || table.cap,
+                    tableNumber: String(updates.num || table.num),
+                    capacity: Number(updates.cap || table.cap),
                     status: updates.status || table.status,
-                    posX: updates.pos?.x ?? table.pos.x,
-                    posY: updates.pos?.y ?? table.pos.y
+                    posX: Math.round(updates.pos?.x ?? table.pos.x),
+                    posY: Math.round(updates.pos?.y ?? table.pos.y)
                 };
 
                 try {
@@ -371,14 +401,19 @@ export const useStore = create(
 
                     if (response.ok) {
                         addLog(`Table ${payload.tableNumber} updated on server`);
-                        // We don't always need to refetch if we update local state, 
-                        // but let's do it for consistency or update local state
+                    } else {
+                        const err = await response.text();
+                        addLog(`UPDATE FAILED: ${err}`);
+                        // Rollback
                         set((state) => ({
-                            tables: state.tables.map(t => t.id === id ? { ...t, ...updates } : t)
+                            tables: state.tables.map(t => t.id === id ? oldTable : t)
                         }));
                     }
                 } catch (error) {
-                    addLog(`Error updating table: ${error.message}`);
+                    addLog(`UPDATE ERROR: ${error.message}`);
+                    set((state) => ({
+                        tables: state.tables.map(t => t.id === id ? oldTable : t)
+                    }));
                 }
             },
 
@@ -388,10 +423,17 @@ export const useStore = create(
             })),
 
             deleteTableAsync: async (id) => {
-                const { token, currentTenantId, fetchTables, addLog } = get();
+                const { token, currentTenantId, tables, fetchTables, addLog } = get();
                 if (!token) return;
 
                 const tidHeader = currentTenantId?.includes?.('tenant') ? '00000000-0000-0000-0000-000000001111' : currentTenantId;
+                const oldTables = [...tables];
+
+                // OPTIMISTIC DELETE
+                set((state) => ({
+                    tables: state.tables.filter(t => t.id !== id),
+                    logs: [...state.logs, `> Deleting Table (Optimistic)...`]
+                }));
 
                 try {
                     const response = await fetch(`/api/table/${id}`, {
@@ -404,10 +446,15 @@ export const useStore = create(
 
                     if (response.ok) {
                         addLog(`Table deleted from server`);
-                        await fetchTables();
+                        // No need to fetch as we already deleted optimistically
+                    } else {
+                        const err = await response.text();
+                        addLog(`DELETE FAILED: ${err}`);
+                        set({ tables: oldTables });
                     }
                 } catch (error) {
-                    addLog(`Error deleting table: ${error.message}`);
+                    addLog(`DELETE ERROR: ${error.message}`);
+                    set({ tables: oldTables });
                 }
             },
 
